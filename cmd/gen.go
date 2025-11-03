@@ -40,7 +40,7 @@ func genProblem(cmd *cobra.Command, args []string) {
 		fmt.Println("Failed to render problem markdown:", err)
 		return
 	}
-	dir := config.GetConfig().Dir.MarkdownDir
+	dir := config.GetConfig().Dir.MarkdownDir + "/" + problem.Difficulty.String()
 	if err = os.MkdirAll(dir, 0755); err != nil {
 		fmt.Println("Failed to create markdown dir:", err)
 		return

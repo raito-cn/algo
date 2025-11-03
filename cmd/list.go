@@ -79,7 +79,7 @@ func listProblems(cmd *cobra.Command, args []string) {
 	fmt.Println("Total problems:", len(problems))
 	for i, p := range problems {
 		fmt.Printf("[%d] [%s] %s | Difficulty: %s | Tags: %s\nSolution URL: %s\n",
-			i,
+			i+1,
 			p.Slug,
 			p.Title,
 			p.Difficulty,
