@@ -1,0 +1,5 @@
+[DIR]
+CODE_DIR = "~/algo/code"
+NOTES_DIR = "~/algo/notes"
+MARKDOWN_DIR = "~/algo/markdown"
+DATASOURCE = "~/algo/db"
