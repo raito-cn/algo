@@ -14,42 +14,76 @@ import (
 )
 
 var genCmd = &cobra.Command{
-	Use:   "gen [slug]",
-	Args:  cobra.ExactArgs(1),
+	Use:   "gen [slug] [type]",
+	Args:  cobra.ExactArgs(2),
 	Short: "[ 生成题目文档 ] Generate a problem markdown file",
-	Run:   genProblem,
+	Run:   getMarkdown,
 }
 
 func InitGenCmd() *cobra.Command {
 	genCmd.Flags().BoolP("debug", "D", false, "Debug mode")
 	genCmd.Long = `Generator a problem by its slug.
 Example:
-  algo gen 0001_two-sum --debug`
+  algo gen 0001_two-sum pro --debug
+  algo gen 1024 codeforces --debug 
+`
 	return genCmd
 }
 
-func genProblem(cmd *cobra.Command, args []string) {
+func getMarkdown(cmd *cobra.Command, args []string) {
+	t := "pro"
+	if len(args) > 1 {
+		t = args[1]
+	}
 	conn := db.GetDB(false)
-	var problem model.Problem
-	if err := conn.Where("slug = ?", args[0]).Preload("Tags").First(&problem).Error; err != nil {
-		fmt.Println("Failed to generate problem:", err)
-		return
-	}
-	markdown, err := renderProblemMarkdown(&problem)
-	if err != nil {
-		fmt.Println("Failed to render problem markdown:", err)
-		return
-	}
-	dir := config.GetConfig().Dir.MarkdownDir + "/" + problem.Difficulty.String()
-	if err = os.MkdirAll(dir, 0755); err != nil {
-		fmt.Println("Failed to create markdown dir:", err)
-		return
-	}
-	fileName := fmt.Sprintf("%s.md", problem.Slug)
-	filePath := filepath.Join(dir, fileName)
-	if err = os.WriteFile(filePath, []byte(markdown), 0644); err != nil {
-		fmt.Println("Failed to write markdown file:", err)
-		return
+	if t == "pro" {
+		var problem model.Problem
+		if err := conn.Where("slug = ?", args[0]).Preload("Tags").First(&problem).Error; err != nil {
+			fmt.Println("Failed to generate problem:", err)
+			return
+		}
+		markdown, err := renderProblemMarkdown(&problem)
+		if err != nil {
+			fmt.Println("Failed to render problem markdown:", err)
+			return
+		}
+		dir := config.GetConfig().Dir.MarkdownDir + "/" + problem.Difficulty.String()
+		if err = os.MkdirAll(dir, 0755); err != nil {
+			fmt.Println("Failed to create markdown dir:", err)
+			return
+		}
+		fileName := fmt.Sprintf("%s.md", problem.Slug)
+		filePath := filepath.Join(dir, fileName)
+		if err = os.WriteFile(filePath, []byte(markdown), 0644); err != nil {
+			fmt.Println("Failed to write markdown file:", err)
+			return
+		}
+	} else {
+		contest := &model.Contest{}
+		if err := conn.Where("title = ? and `type` = ?", args[0], t).Preload("Problems.Tags").First(contest).Error; err != nil {
+			fmt.Println("Failed to generate contest:", err)
+			return
+		}
+		var sb strings.Builder
+		for _, problem := range contest.Problems {
+			markdown, err := renderProblemMarkdown(problem)
+			if err != nil {
+				fmt.Println("Failed to render problem markdown:", err)
+				return
+			}
+			sb.WriteString(markdown + "\n---\n")
+		}
+		dir := config.GetConfig().Dir.MarkdownDir + "/" + contest.Type.String()
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			fmt.Println("Failed to create markdown dir:", err)
+			return
+		}
+		fileName := fmt.Sprintf("%s.md", contest.Title)
+		filePath := filepath.Join(dir, fileName)
+		if err := os.WriteFile(filePath, []byte(sb.String()), 0644); err != nil {
+			fmt.Println("Failed to write markdown file:", err)
+			return
+		}
 	}
 	fmt.Println("Markdown file generated successfully")
 }

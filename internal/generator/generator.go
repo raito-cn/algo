@@ -40,7 +40,7 @@ func getTemplate() string {
 | 属性 | 内容 |
 | ---- | ---- |
 | **难度** | {{ problem.Difficulty }} |
-| **标签** | {% for t in problem.Tags %}{{ t }} {% endfor %} |
+| **标签** | {% for t in problem.Tags %}{{ t }}{% if not forloop.Last %}, {% endif %}{% endfor %} |
 | **链接** | [在线题目]({{ problem.SolutionURL }}) |
 {% if problem.Score != none %}| **评分** | {{ problem.Score }} |{% endif %}
 | **创建时间** | {{ problem.CreatedAt }} |

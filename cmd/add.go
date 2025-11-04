@@ -26,12 +26,14 @@ func InitAddCmd() *cobra.Command {
 	addCmd.Flags().StringP("codePath", "c", "", "[ 题目代码本地地址 ] Problem code path")
 	addCmd.Flags().BoolP("debug", "D", false, "Debug mode")
 	addCmd.Flags().StringP("score", "s", "", "[ 题目评分 ] Problem score")
+	addCmd.Flags().StringP("contest", "e", "", "[ 题目竞赛 ] Problem contest")
+	addCmd.Flags().StringP("contestType", "E", "", "[ 题目竞赛类型 ] Problem contest type")
 	return addCmd
 }
 
 func addProblem(cmd *cobra.Command, args []string) {
 	debug, _ := cmd.Flags().GetBool("debug")
-	title, difficulty, tags, solution, note, codePath, score := getAddCmdParams(cmd, debug)
+	title, difficulty, tags, solution, note, codePath, score, contest, contestType := getAddCmdParams(cmd, debug)
 
 	diff := model.Difficulty(difficulty)
 	valid := diff.Valid()
@@ -67,6 +69,26 @@ func addProblem(cmd *cobra.Command, args []string) {
 		problem.SetCodePath()
 		if err := tx.Create(&problem).Error; err != nil {
 			return err
+		}
+		if contest != "" {
+			cts := &model.Contest{}
+			if err = tx.Where("title = ?", contest).Preload("Problems").First(cts).Error; err != nil {
+				if errors.Is(err, gorm.ErrRecordNotFound) {
+					ct, _ := model.GetContestType(contestType)
+					tx.Model(&model.Contest{}).Select("max(id)").First(&count)
+					count++
+
+					cts = &model.Contest{
+						ID:       count,
+						Title:    contest,
+						Type:     ct,
+						Problems: []*model.Problem{},
+					}
+				}
+			}
+
+			cts.Problems = append(cts.Problems, problem)
+			tx.Save(cts)
 		}
 
 		return nil
@@ -111,7 +133,7 @@ func CheckTags(tx *gorm.DB, tags string) ([]*model.Tag, error) {
 	return tagsArr, nil
 }
 
-func getAddCmdParams(cmd *cobra.Command, debug bool) (string, string, string, string, string, string, string) {
+func getAddCmdParams(cmd *cobra.Command, debug bool) (string, string, string, string, string, string, string, string, string) {
 	title := getCmdParam(cmd, "title", "Title: ", debug)
 	difficulty := getCmdParam(cmd, "difficulty", "Difficulty (easy|medium|hard):", debug)
 	tags := getCmdParam(cmd, "tags", "Tags: ", debug)
@@ -119,5 +141,10 @@ func getAddCmdParams(cmd *cobra.Command, debug bool) (string, string, string, st
 	note := getCmdParam(cmd, "note", "Note: ", debug)
 	codePath := getCmdParam(cmd, "codePath", "Code Path: ", debug)
 	score := getCmdParam(cmd, "score", "Score: ", debug)
-	return title, difficulty, tags, solution, note, codePath, score
+	contest := cmd.Flag("contest").Value.String()
+	contestType := ""
+	if contest != "" {
+		contestType = getCmdParam(cmd, "contestType", "ContestType:", debug)
+	}
+	return title, difficulty, tags, solution, note, codePath, score, contest, contestType
 }

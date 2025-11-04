@@ -52,6 +52,39 @@ type Problem struct {
 	UpdatedAt   time.Time  `gorm:"autoUpdateTime;comment:更新时间"`                     // 更新时间
 	Tags        []*Tag     `gorm:"many2many:problem_tags;"`                         // 标签逻辑
 	Description string     `gorm:"text;comment:题目描述"`                               // 题目描述
+	ContestID   int64      `gorm:"index;comment:所属竞赛ID"`
+}
+
+// ContestType 竞赛类型
+type ContestType string
+
+const (
+	LEETCODE   ContestType = "leetcode"
+	CODEFORCES ContestType = "codeforces"
+)
+
+func (d *ContestType) String() string {
+	return string(*d)
+}
+
+func GetContestType(s string) (ContestType, error) {
+	toLower := strings.ToLower(s)
+	switch toLower {
+	case "leetcode", "l":
+		return LEETCODE, nil
+	case "codeforces", "c":
+		return CODEFORCES, nil
+	default:
+		return LEETCODE, fmt.Errorf("未找到匹配的类型")
+	}
+}
+
+// Contest 竞赛
+type Contest struct {
+	ID       int64       `gorm:"primaryKey;autoIncrement:false;comment:主键"`
+	Title    string      `gorm:"not null;size:255;comment:竞赛名"`
+	Type     ContestType `gorm:"not null:size:255;comment:竞赛类型"`
+	Problems []*Problem  `gorm:"foreignKey:ContestID;constraint:OnDelete:SET NULL;"`
 }
 
 func (p *Problem) SetSlug() {

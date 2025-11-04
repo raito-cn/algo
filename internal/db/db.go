@@ -46,7 +46,7 @@ func initDB(debug bool) {
 	sqlDB.SetConnMaxLifetime(time.Hour)
 	sqlDB.SetConnMaxIdleTime(time.Minute * 30)
 
-	err = db.AutoMigrate(&model.Problem{}, &model.Tag{})
+	err = db.AutoMigrate(&model.Problem{}, &model.Tag{}, &model.Contest{})
 	if err != nil {
 		log.Error("failed to auto migrate", zap.Error(err))
 	}
